@@ -6,7 +6,10 @@ import requests
 import sys, os, os.path
 from contextlib import closing
 
-from destinyapi import DAPI, DAPIError
+from destinyapi import DAPI, DAPIError, Character
+from destinyapi.helpers import print_character_stats, get_characters_from_username
+
+from apicfg import API_KEY
 
 try:
     import cPickle as pickle
@@ -57,7 +60,7 @@ def main():
     ipshell = InteractiveShellEmbed(config=cfg, banner1=_banner)
 
     # Setup environment
-    dapi = DAPI('e74472af81814780ab73b51ddf84cf9c')
+    dapi = DAPI(API_KEY)
 
     if os.path.exists(os.path.expanduser('~/.dapi.cfg')):
         dapi.load_user_data(os.path.expanduser('~/.dapi.cfg'))

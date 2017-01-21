@@ -21,7 +21,7 @@ class DAPI(object):
         self._headers = {'X-API-Key': api_key}
 
         if username:
-            self.set_username(username)
+            self._set_username(username)
         else:
             if load_data is not False:
                 if isinstance(load_data, dict):
@@ -33,23 +33,17 @@ class DAPI(object):
             elif os.path.exists(os.path.expanduser('~/.dapi.cfg')):
                 self.load_user_data(os.path.expanduser('~/.dapi.cfg'))
 
-    def _validate_membership_id(self, membership_id):
+    def _validate_membership_id(self, membership_id, use_own=True):
         if membership_id is None:
-            if not self._user_data.has_key('membershipId'):
-                raise DAPIError('Own username was not specified')
+            if not use_own:
+                raise DAPIError('No membership_id was provided')
+
+            if not self._user_data or (not 'membershipId' in self._user_data):
+                raise DAPIError('Own username was not specified or internal user data is missing')
 
             return self._user_data['membershipId']
 
         return membership_id
-
-    def dump_user_data(self):
-        if not self._user_data:
-            return None
-
-        res = self._user_data
-        res['account'] = self.get_account(self._user_data['membershipId'])
-
-        return res
 
     def save_user_data(self, data_file, force_write=False):
         if os.path.exists(data_file):
@@ -62,8 +56,11 @@ class DAPI(object):
 
         return True
 
-    def load_user_data(self, data_file):
+    def load_user_data(self, data_file, force_read=False):
         if not os.path.exists(data_file):
+            if not force_read:
+                return self._user_data
+
             raise DAPIError('Unable to read user_data from file "%s"' % data_file)
 
         with open(data_file, 'rb') as f:
@@ -71,16 +68,22 @@ class DAPI(object):
 
         return self._user_data
 
-    def set_username(self, username):
-        res = self.search(username)
-
-        if len(res) != 1:
+    def _set_username(self, username, silent=True):
+        if not username:
             return False
-
-        res = res[0]
-
-        res['account'] = self.get_account(res['membershipId'])
-        self._user_data = res
+        try:
+            usr = self.search(username=username)
+            if not usr:
+                if not silent:
+                    raise DAPIError('Invalid or empty result when searching for "%s"' % username)
+                return False
+            usr['account'] = self.get_account(membership_id=usr['membershipId'])
+            self._user_data = usr
+            return True
+        except Exception,ex:
+            if not silent:
+                raise ex
+            return False
 
     def get_inventory(self, character_id, membership_id=None):
         membership_id = self._validate_membership_id(membership_id)
@@ -96,6 +99,15 @@ class DAPI(object):
     def get_account(self, membership_id=None):
         membership_id = self._validate_membership_id(membership_id)
         return self._call('1/Account/%s/Summary/' % membership_id)
+
+    def get_characters(self, membership_id=None):
+        membership_id = self._validate_membership_id(membership_id)
+        acct = self.get_account(membership_id=membership_id)
+        return acct['characters']
+
+    def get_character(self, character_id, membership_id=None):
+        membership_id = self._validate_membership_id(membership_id)
+        return self._call('1/Account/%s/Character/%s' % (membership_id, character_id))
 
     def get_vault(self, membership_id=None):
         membership_id = self._validate_membership_id(membership_id)
@@ -133,8 +145,11 @@ class DAPI(object):
                 if not res:
                     return None
 
-                if (len(res) == 1) and ('data' in res):
-                    res = res['data']
+                if (len(res) == 1):
+                    if isinstance(res, dict) and ('data' in res):
+                        res = res['data']
+                    elif isinstance(res, list):
+                        res = res[0]
 
                 return res
         except requests.exceptions.RequestsWarning,ex:
