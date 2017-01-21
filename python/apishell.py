@@ -9,8 +9,6 @@ from contextlib import closing
 from destinyapi import DAPI, DAPIError, Character
 from destinyapi.helpers import print_character_stats, get_characters_from_username
 
-from apicfg import API_KEY
-
 try:
     import cPickle as pickle
 except NameError:
@@ -58,15 +56,25 @@ def main():
     cfg.TerminalInteractiveShell.debug = True
 
     ipshell = InteractiveShellEmbed(config=cfg, banner1=_banner)
+    api_key = None
 
-    # Setup environment
-    dapi = DAPI(API_KEY)
+    if os.path.exists(os.path.expanduser('~/.dapi.key')):
+        with open(os.path.expanduser('~/.dapi.key')) as f:
+            api_key = f.readline().strip()
+    else:
+        api_key = raw_input('API Key: ')
+        if api_key:
+            with open(os.path.expanduser('~/.dapi.key'), 'w') as f:
+                f.write(api_key)
 
-    if os.path.exists(os.path.expanduser('~/.dapi.cfg')):
-        dapi.load_user_data(os.path.expanduser('~/.dapi.cfg'))
+    if not api_key:
+        print >>sys.stderr,'No API key specified...'
+    else:
+        dapi = DAPI(API_KEY)
 
-    ipshell()
+        if os.path.exists(os.path.expanduser('~/.dapi.cfg')):
+            dapi.load_user_data(os.path.expanduser('~/.dapi.cfg'))
 
-    # Cleanup environment
+        ipshell()
 if __name__ == '__main__':
     main()
