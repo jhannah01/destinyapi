@@ -6,6 +6,7 @@ objects
 
 '''
 
+from .exc import DAPIError
 from pandas import DataFrame
 
 def get_characters_from_username(dapi, username, extended=False, silent=False):
@@ -48,6 +49,10 @@ def print_character_stats(character, silent=False):
         representation as well.
     '''
     bchar = character['characterBase']
+    if 'stats' not in bchar:
+        print 'Could not find stats for character in object'
+        return
+
     stats = bchar['stats']
     out_stats = {}
     tbl = []

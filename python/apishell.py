@@ -6,7 +6,7 @@ import requests
 import sys, os, os.path
 from contextlib import closing
 
-from destinyapi import DAPI, DAPIError, Character
+from destinyapi import DAPI, DAPIError, Character, load_manifest, get_hash_for_db, get_hash_from_db
 from destinyapi.helpers import print_character_stats, get_characters_from_username
 
 try:
@@ -55,7 +55,7 @@ def main():
     cfg.TerminalInteractiveShell.confirm_exit = False
     cfg.TerminalInteractiveShell.debug = True
 
-    ipshell = InteractiveShellEmbed(config=cfg, banner1=_banner)
+    ipshell = InteractiveShellEmbed.instance(config=cfg, banner1=_banner)
     api_key = None
 
     if os.path.exists(os.path.expanduser('~/.dapi.key')):
@@ -70,7 +70,7 @@ def main():
     if not api_key:
         print >>sys.stderr,'No API key specified...'
     else:
-        dapi = DAPI(API_KEY)
+        dapi = DAPI(api_key)
 
         if os.path.exists(os.path.expanduser('~/.dapi.cfg')):
             dapi.load_user_data(os.path.expanduser('~/.dapi.cfg'))

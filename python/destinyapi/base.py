@@ -1,8 +1,11 @@
-import requests
+import types
+import zipfile
+import StringIO
+import tempfile
+from contextlib import closing
 import os
 import os.path
-import types
-from contextlib import closing
+import requests
 
 try:
     import cPickle as pickle
@@ -38,7 +41,7 @@ class DAPI(object):
             if not use_own:
                 raise DAPIError('No membership_id was provided')
 
-            if not self._user_data or (not 'membershipId' in self._user_data):
+            if not self._user_data or ('membershipId' not in self._user_data):
                 raise DAPIError('Own username was not specified or internal user data is missing')
 
             return self._user_data['membershipId']
@@ -116,9 +119,37 @@ class DAPI(object):
     def search(self, username):
         return self._call('SearchDestinyPlayer/1/%s/' % username)
 
-    def get_manifest(self, type_id, membership_id=None):
-        membership_id = self._validate_membership_id(membership_id)
-        return self._call('Manifest/%s/%s' % (type_id, membership_id))
+    def fetch_world_manifest(self, lang='en'):
+        lang = lang.lower()
+        manifests = self._call('Manifest')
+
+        if 'mobileWorldContentPaths' not in manifests:
+            raise DAPIError('Unable to find manifest world content')
+
+        if lang not in manifests['mobileWorldContentPaths']:
+            raise DAPIError('Unable to find world manifest for language "%s"' % lang)
+
+        manifest_path = manifests['mobileWorldContentPaths'][lang]
+
+        try:
+            manifest_url = 'https://www.bungie.net%s' % manifests['mobileWorldContentPaths'][lang]
+            tmp_path = tempfile.gettempdir()
+            f_name = os.path.basename(manifest_path)
+            dst_path = os.path.join(tmp_path, f_name)
+
+            with closing(requests.get(manifest_url)) as req:
+                manifest_zip = zipfile.ZipFile(StringIO.StringIO(req.content))
+                manifest_zip.extractall(path=tmp_path)
+
+            if not os.path.exists(dst_path):
+                raise DAPIError('Unable to unzip manifest into %s (filename: "%s")' % (
+                    tmp_path, f_name))
+
+            return dst_path
+        except zipfile.BadZipfile, ex:
+            raise DAPIError('Manifest appears to be an invalid zip file: %s' % str(ex))
+        except requests.RequestException, ex:
+            raise DAPIError('Error fetching manifest from server: %s' % str(ex))
 
     def get_all_items_summary(self, membership_id=None):
         membership_id = self._validate_membership_id(membership_id)
