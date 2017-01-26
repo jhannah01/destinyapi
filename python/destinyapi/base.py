@@ -99,6 +99,14 @@ class DAPI(object):
         cids = map(lambda c: c['characterBase']['characterId'], self._user_data['account']['characters'])
         return dict.fromkeys(cids, [self.get_inventory(membership_id=membership_id, character_id=c) for c in cids])
 
+    def get_inventory_item(self, item_id):
+        membership_id = self._validate_membership_id(membership_id)
+        res = self._call('Manifest/InventoryItem/%s' % item_id)
+
+        if not res:
+            return None
+        return InventoryItem(res['requestedId'], res['inventoryItem'])
+
     def get_account(self, membership_id=None):
         membership_id = self._validate_membership_id(membership_id)
         return self._call('1/Account/%s/Summary/' % membership_id)

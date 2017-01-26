@@ -8,6 +8,9 @@ objects
 
 from .exc import DAPIError
 from pandas import DataFrame
+import ctypes
+
+from destinyapi.character import Character
 
 def get_characters_from_username(dapi, username, extended=False, silent=False):
     '''Fetches the account associated with the provided username and parses all of the user's characters. Optionally,
@@ -28,6 +31,10 @@ def get_characters_from_username(dapi, username, extended=False, silent=False):
     try:
         usr_id = dapi.search(username=username)['membershipId']
         usr_acct = dapi.get_account(membership_id=usr_id)
+
+        if extended:
+            return usr_acct
+
         return usr_acct['characters']
     except DAPIError,ex:
         if silent:
@@ -84,4 +91,23 @@ def print_character_stats(character, silent=False):
 
     return out_stats
 
-__all__ = ['print_character_stats', 'get_characters_from_username']
+def get_unsigned_value(value):
+    try:
+        return ctypes.c_uint(value).value
+    except TypeError, ex:
+        raise DAPIError('Invalid value provided: "%r"' % value)
+
+def get_signed_value(value):
+    try:
+        return ctypes.c_int(value).value
+    except TypeError, ex:
+        raise DAPIError('Invalid value provided: "%r"' % value)
+
+def dump_character_items(dapi, character):
+    if isinstance(character, dict):
+        character = Character.from_api(character)
+    elif not isinstance(character, Character):
+        raise DAPIError('Could not determine provided character type.')
+
+
+__all__ = ['print_character_stats', 'get_characters_from_username', 'get_unsigned_value', 'get_signed_value']
