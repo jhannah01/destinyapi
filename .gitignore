@@ -2,6 +2,7 @@
 .*.sw[po]
 *.py[co]
 .ropeproject/
+.local/
 
 # Built application files
 *.apk

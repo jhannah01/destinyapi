@@ -74,6 +74,8 @@ def main():
 
         if os.path.exists(os.path.expanduser('~/.dapi.cfg')):
             dapi.load_user_data(os.path.expanduser('~/.dapi.cfg'))
+        else:
+            dapi.save_user_data(os.path.expanduser('~/.dapi.cfg'))
 
         ipshell()
 if __name__ == '__main__':

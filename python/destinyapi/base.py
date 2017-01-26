@@ -21,8 +21,6 @@ class DAPI(object):
     _user_data = {}
 
     def __init__(self, api_key, username=None, load_data=False):
-        self._headers = {'X-API-Key': api_key}
-
         if username:
             self._set_username(username)
         else:
@@ -33,8 +31,14 @@ class DAPI(object):
                     self.load_user_data(load_data)
                 else:
                     raise DAPIError('Unable to determine how to load the provided load_data')
-            elif os.path.exists(os.path.expanduser('~/.dapi.cfg')):
-                self.load_user_data(os.path.expanduser('~/.dapi.cfg'))
+            else:
+                if os.path.exists(os.path.expanduser('~/.dapi.cfg')):
+                    self.load_user_data(os.path.expanduser('~/.dapi.cfg'))
+                elif api_key:
+                    self.save_user_data(os.path.expanduser('~/.dapi.cfg'))
+
+        self._headers = {'X-API-Key': api_key}
+
 
     def _validate_membership_id(self, membership_id, use_own=True):
         if membership_id is None:
